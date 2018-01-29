@@ -6,6 +6,8 @@ defmodule IslandsEngine.Coordinate do
 
   @bounds 1..10
 
-  def new(row, col) when row in @bounds and col in @bounds, do: %Coordinate{row: row, col: col}
+  def new(row, col) when row in @bounds and col in @bounds,
+    do: {:ok, %Coordinate{row: row, col: col}}
+
   def new(_row, _col), do: {:error, :invalid_coordinates}
 end
