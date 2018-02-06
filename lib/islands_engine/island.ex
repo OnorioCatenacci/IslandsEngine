@@ -37,7 +37,7 @@ defmodule IslandsEngine.Island do
     do: not MapSet.disjoint?(existing_island.coordinates, new_island.coordinates)
 
   def guess(island, coordinate) do
-    case MapSet.member?(island.coordiantes, coordinate) do
+    case MapSet.member?(island.coordinates, coordinate) do
       true ->
         hit_coordinates = MapSet.put(island.hit_coordinates, coordinate)
         {:hit, %{island | hit_coordinates: hit_coordinates}}
@@ -48,4 +48,6 @@ defmodule IslandsEngine.Island do
   end
 
   def forested?(island), do: MapSet.equal?(island.coordinates, island.hit_coordinates)
+
+  def types(), do: [:atoll, :dot, :l_shape, :s_shape, :square]
 end
