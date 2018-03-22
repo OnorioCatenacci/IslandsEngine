@@ -1,7 +1,8 @@
 defmodule IslandsEngine.Game do
-  use GenServer
+  use GenServer, start: {__MODULE__, :start_link, []}, restart: :transient
   alias IslandsEngine.{Board, Coordinate, Guesses, Island, Rules}
   @players [:player1, :player2]
+  @timeout 60 * 60 * 24 * 1_000
 
   def start_link(name) when is_binary(name),
     do: GenServer.start_link(__MODULE__, name, name: via_tuple(name))
@@ -9,7 +10,7 @@ defmodule IslandsEngine.Game do
   def init(name) do
     player1 = %{name: name, board: Board.new(), guesses: Guesses.new()}
     player2 = %{name: nil, board: Board.new(), guesses: Guesses.new()}
-    {:ok, %{player1: player1, player2: player2, rules: %Rules{}}}
+    {:ok, %{player1: player1, player2: player2, rules: %Rules{}}, @timeout}
   end
 
   def add_player(game, name) when is_binary(name), do: GenServer.call(game, {:add_player, name})
@@ -21,7 +22,7 @@ defmodule IslandsEngine.Game do
       |> update_rules(rules)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
+      :error -> {:reply, :error, state_data, @timeout}
     end
   end
 
@@ -37,9 +38,14 @@ defmodule IslandsEngine.Game do
       |> update_rules(rules)
       |> reply_success(:ok)
     else
-      :error -> {:reply, :error, state_data}
-      {:error, :invalid_coordinate} -> {:reply, {:error, :invalid_coordinate}, state_data}
-      {:error, :invalid_island_type} -> {:reply, {:error, :invalid_island_type}, state_data}
+      :error ->
+        {:reply, :error, state_data, @timeout}
+
+      {:error, :invalid_coordinate} ->
+        {:reply, {:error, :invalid_coordinate}, state_data, @timeout}
+
+      {:error, :invalid_island_type} ->
+        {:reply, {:error, :invalid_island_type}, state_data, @timeout}
     end
   end
 
@@ -52,8 +58,8 @@ defmodule IslandsEngine.Game do
       |> update_rules(rules)
       |> reply_success({:ok, board})
     else
-      :error -> {:reply, :error, state_data}
-      false -> {:reply, {:error, :not_all_islands_positioned}, state_data}
+      :error -> {:reply, :error, state_data, @timeout}
+      false -> {:reply, {:error, :not_all_islands_positioned}, state_data, @timeout}
     end
   end
 
@@ -72,9 +78,16 @@ defmodule IslandsEngine.Game do
       |> update_rules(rules)
       |> reply_success({hit_or_miss, forested_island, win_status})
     else
-      :error -> {:reply, :error, state_data}
-      {:error, :invalid_coordinate} -> {:reply, {:error, :invalid_coordinate}, state_data}
+      :error ->
+        {:reply, :error, state_data, @timeout}
+
+      {:error, :invalid_coordinate} ->
+        {:reply, {:error, :invalid_coordinate}, state_data, @timeout}
     end
+  end
+
+  def handle_info(:timeout, state_data) do
+    {:stop, {:shutdown, :timeout}, state_data}
   end
 
   def set_islands(game, player) when player in @players,
@@ -89,7 +102,7 @@ defmodule IslandsEngine.Game do
 
   defp update_rules(state_data, rules), do: %{state_data | rules: rules}
 
-  defp reply_success(state_data, reply), do: {:reply, reply, state_data}
+  defp reply_success(state_data, reply), do: {:reply, reply, state_data, @timeout}
 
   def position_island(game, player, key, row, col) when player in @players,
     do: GenServer.call(game, {:position_island, player, key, row, col})
