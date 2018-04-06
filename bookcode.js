@@ -45,3 +45,20 @@ function say_hello(channel, greeting){
 game_channel.on("said_hello", response => {
   console.log("Returned greeting: ", response.message)
 })
+
+function new_game(channel){
+  channel.push("new_game")
+  .receive("ok", response => {
+    console.log("New Game!", response)
+  })
+  .receive("error", response =>{
+    console.log("Unable to start a new game", response)
+  })
+}
+
+function add_player(channel, player){
+  channel.push("add_player", player)
+  .receive("error", response => {
+    console.log("Unable to add new player: "+ player, response)
+  })
+}
